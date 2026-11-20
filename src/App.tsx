@@ -3,6 +3,19 @@ import { loadDigest } from './digest'
 import { plural } from './plural'
 import type { NewsItem } from './types'
 
+const STORAGE_KEY = 'digest_read_ids'
+
+function getInitialReadIds(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
 export default function App() {
   const [news, setNews] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -11,7 +24,7 @@ export default function App() {
   const [query, setQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState('')
   const [onlyUnread, setOnlyUnread] = useState(false)
-  const [readIds, setReadIds] = useState<string[]>([])
+  const [readIds, setReadIds] = useState<string[]>(getInitialReadIds)
 
   useEffect(() => {
     let ignore = false
@@ -58,9 +71,17 @@ export default function App() {
   }
 
   function handleToggleRead(id: string) {
-    setReadIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
+    setReadIds((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((item) => item !== id)
+        : [...prev, id]
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      } catch {
+        // ignore
+      }
+      return next
+    })
   }
 
   const newsWord = plural(news.length, ['новости', 'новостей', 'новостей'])

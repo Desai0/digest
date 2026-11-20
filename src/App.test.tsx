@@ -38,6 +38,7 @@ const mockData = {
 describe('App', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    localStorage.clear()
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -126,6 +127,60 @@ describe('App', () => {
       expect(screen.getByText('Новостей не найдено')).toBeInTheDocument()
       expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()
       expect(screen.getByText('Показано 0 из 3 новостей')).toBeInTheDocument()
+    })
+  })
+
+  describe('Задание 3: Отметка «прочитано» и сохранение в localStorage', () => {
+    it('отмечает новость прочитанной при клике и снимает отметку повторным кликом', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+
+      await screen.findByText('Релиз React 19')
+      const buttons = screen.getAllByRole('button', { name: 'Отметить прочитанным' })
+      const firstButton = buttons[0]
+
+      await user.click(firstButton)
+      expect(firstButton).toHaveTextContent('Прочитано ✓')
+      expect(firstButton).toHaveAttribute('aria-pressed', 'true')
+      expect(firstButton.closest('article')).toHaveClass('news-card--read')
+      expect(localStorage.getItem('digest_read_ids')).toContain('item-1')
+
+      await user.click(firstButton)
+      expect(firstButton).toHaveTextContent('Отметить прочитанным')
+      expect(firstButton).toHaveAttribute('aria-pressed', 'false')
+      expect(firstButton.closest('article')).not.toHaveClass('news-card--read')
+    })
+
+    it('восстанавливает отметки о прочитанном из localStorage при перезагрузке', async () => {
+      localStorage.setItem('digest_read_ids', JSON.stringify(['item-2']))
+
+      render(<App />)
+
+      await screen.findByText('Релиз React 19')
+
+      const telescopeCard = screen.getByText('Телескоп Джеймс Уэбб').closest('article')
+      expect(telescopeCard).toHaveClass('news-card--read')
+      expect(telescopeCard).toHaveTextContent('Прочитано ✓')
+
+      const reactCard = screen.getByText('Релиз React 19').closest('article')
+      expect(reactCard).not.toHaveClass('news-card--read')
+      expect(reactCard).toHaveTextContent('Отметить прочитанным')
+    })
+
+    it('флажок «Только непрочитанные» скрывает прочитанные новости', async () => {
+      const user = userEvent.setup()
+      localStorage.setItem('digest_read_ids', JSON.stringify(['item-1']))
+
+      render(<App />)
+
+      await screen.findByText('Релиз React 19')
+      const unreadCheckbox = screen.getByLabelText('Только непрочитанные')
+
+      await user.click(unreadCheckbox)
+      expect(screen.queryByText('Релиз React 19')).not.toBeInTheDocument()
+      expect(screen.getByText('Телескоп Джеймс Уэбб')).toBeInTheDocument()
+      expect(screen.getByText('Новый ускоритель для ИИ')).toBeInTheDocument()
+      expect(screen.getByText('Показано 2 из 3 новостей')).toBeInTheDocument()
     })
   })
 })
