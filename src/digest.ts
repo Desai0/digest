@@ -13,7 +13,9 @@ export function parseTags(tags: string | string[]): string[] {
   return []
 }
 
-export async function loadDigest(url = import.meta.env.VITE_DIGEST_URL as string): Promise<NewsItem[]> {
+export async function loadDigest(
+  url = (import.meta.env.VITE_DIGEST_URL as string) || `${import.meta.env.BASE_URL}data/news.json`
+): Promise<NewsItem[]> {
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`Дайджест не загрузился: код ${response.status}.`)
