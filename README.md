@@ -1,32 +1,58 @@
-# React + TypeScript + Vite
+# Дайджест новостей (`digest`)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Проект 4 модуля курса «Frontend-разработка: Angular и React».  
+Веб-приложение для чтения ежедневных новостей из RSS-лент, обработанных и суммаризированных локальной нейросетью, с возможностью поиска, фильтрации по тегам и сохранения прочитанных материалов.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Архитектура системы
 
-## React Compiler
+- **Бэкенд автоматизации**:
+  - n8n в Docker каждое утро в 8:00 читает ленты Хабр, 3DNews, iXBT;
+  - Модель `qwen3:4b-instruct` в Ollama формирует суммаризацию ровно в 2 предложениях и проставляет теги;
+  - Скрипт Google Apps Script (`Код.gs`) по POST с секретным ключом дедуплицирует новости и дописывает их в Google Таблицу;
+  - По GET скрипт Apps Script возвращает новости в JSON;
+  - Вечером в 19:00 n8n собирает новости за последние 24 часа и присылает сводку в Telegram-бот.
+- **Фронтенд-приложение**:
+  - React 19, TypeScript, Vite;
+  - Загрузка данных через `loadDigest()` с обработкой состояний `loading`, `error`;
+  - Фильтрация (поиск, теги, флажок «Только непрочитанные») — вычисляется при рендере (derived state);
+  - Отметка «прочитано» сохраняется в `localStorage` по ключу `digest_read_ids` и восстанавливается после перезагрузки;
+  - Доступность по стандарту WCAG AA (Lighthouse 100).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the Oxlint configuration
+## Процесс работы с ИИ (Режим Р2)
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Код проекта создавался пошагово по циклу Р2:
+1. [AGENTS.md](AGENTS.md) — регламент и формат данных для агента.
+2. Папка [tasks/](tasks/) — задания агенту с разделом «Готово, когда»:
+   - [01-zagruzka.md](tasks/01-zagruzka.md) — загрузка дайджеста и карточки;
+   - [02-poisk-i-filtry.md](tasks/02-poisk-i-filtry.md) — поиск, теги, счётчик;
+   - [03-prochitannye.md](tasks/03-prochitannye.md) — отметка «прочитано» и localStorage;
+   - [04-dostupnost-i-ci.md](tasks/04-dostupnost-i-ci.md) — a11y и GitHub Actions.
+3. [ai-log.md](ai-log.md) — журнал работы с фиксацией каждого задания, автоматических проверок и решений разработчика.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+---
+
+## Локальный запуск и проверка
+
+```bash
+# Установка зависимостей
+npm install
+
+# Запуск dev-сервера
+npm run dev
+
+# Проверка типов
+npx tsc -b
+
+# Проверка линтером с проверкой доступности jsx-a11y
+npm run lint -- --deny-warnings
+
+# Запуск тестов Vitest
+npm test
+
+# Сборка продакшен-бандла
+npm run build
 ```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
